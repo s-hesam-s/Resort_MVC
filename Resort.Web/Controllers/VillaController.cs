@@ -17,7 +17,7 @@ namespace Resort.Web.Controllers
         {
             List<Villa> villas = _db.Villas.ToList();
             
-            return View();
+            return View(villas);
         }
     }
 }

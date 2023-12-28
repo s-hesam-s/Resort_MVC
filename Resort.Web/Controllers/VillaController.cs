@@ -16,7 +16,7 @@ namespace Resort.Web.Controllers
         public IActionResult Index()
         {
             List<Villa> villas = _db.Villas.ToList();
-            
+
             return View(villas);
         }
 
@@ -28,9 +28,13 @@ namespace Resort.Web.Controllers
         [HttpPost]
         public IActionResult Create(Villa obj)
         {
-            _db.Villas.Add(obj);
-            _db.SaveChanges();
-            return RedirectToAction("Index");
+            if (ModelState.IsValid)
+            {
+                _db.Villas.Add(obj);
+                _db.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            return View();
         }
     }
 }

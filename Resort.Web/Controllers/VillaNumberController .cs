@@ -26,18 +26,13 @@ namespace Resort.Web.Controllers
         }
 
         [HttpPost]
-        public IActionResult Create(Villa obj)
+        public IActionResult Create(VillaNumber obj)
         {
-            if (obj.Name == obj.Description)
-            {
-                ModelState.AddModelError("name", "The description cannot exactly match the Name.");
-            }
-
             if (ModelState.IsValid)
             {
-                _db.Villas.Add(obj);
+                _db.VillaNumbers.Add(obj);
                 _db.SaveChanges();
-                TempData["success"] = "The villa has been created successfully.";
+                TempData["success"] = "The villa Number has been created successfully.";
                 return RedirectToAction("Index");
             }
             return View();

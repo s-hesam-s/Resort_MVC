@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using Resort.Domain.Entities;
 using Resort.Infrastructure.Data;
 using Resort.Web.ViewModels;
@@ -17,7 +18,7 @@ namespace Resort.Web.Controllers
 
         public IActionResult Index()
         {
-            List<VillaNumber> villaNumbers = _db.VillaNumbers.ToList();
+            List<VillaNumber> villaNumbers = _db.VillaNumbers.Include(u => u.Villa).ToList();
 
             return View(villaNumbers);
         }

@@ -23,11 +23,5 @@ namespace Resort.Infrastructure.Repository
         {
             _db.Villas.Update(entity);
         }
-
-        public void Save()
-        {
-            _db.SaveChanges();
-        }
-        
     }
 }

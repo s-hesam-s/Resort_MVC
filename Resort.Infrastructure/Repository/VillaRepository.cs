@@ -1,5 +1,6 @@
 ﻿using Resort.Application.Common.Interfaces;
 using Resort.Domain.Entities;
+using Resort.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,9 +12,15 @@ namespace Resort.Infrastructure.Repository
 {
     public class VillaRepository : IVillaRepository
     {
+        private readonly ApplicationDbContext _db;
+        public VillaRepository(ApplicationDbContext db)
+        {
+            _db = db;
+        }
+
         public void Add(Villa entity)
         {
-            throw new NotImplementedException();
+            _db.Add(entity);
         }
 
         public IEnumerable<Villa> Get(Expression<Func<Villa, bool>> filter, string? includeProperties = null)
@@ -28,17 +35,17 @@ namespace Resort.Infrastructure.Repository
 
         public void Remove(Villa entity)
         {
-            throw new NotImplementedException();
+            _db.Remove(entity);
         }
 
         public void Save()
         {
-            throw new NotImplementedException();
+            _db.SaveChanges();
         }
 
         public void Update(Villa entity)
         {
-            throw new NotImplementedException();
+            _db.Villas.Update(entity);
         }
     }
 }

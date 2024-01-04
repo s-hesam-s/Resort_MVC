@@ -122,10 +122,10 @@ namespace Resort.Web.Controllers
             {
                 _unitOfWork.Amenity.Remove(objFromDb);
                 _unitOfWork.Save();
-                TempData["success"] = "The villa number has been deleted successfully.";
+                TempData["success"] = "The amenity has been deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            TempData["error"] = "The villa number could not be deleted.";
+            TempData["error"] = "The amenity could not be deleted.";
             amenityVM.VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
             {
                 Text = u.Name,

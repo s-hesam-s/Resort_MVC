@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Resort.Application.Common.Interfaces;
+using Resort.Application.Common.Utility;
 using Resort.Domain.Entities;
 using Resort.Infrastructure.Data;
 
 namespace Resort.Web.Controllers
 {
+    [Authorize]
     public class VillaController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;

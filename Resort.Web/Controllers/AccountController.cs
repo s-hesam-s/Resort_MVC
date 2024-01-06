@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Resort.Application.Common.Interfaces;
 using Resort.Domain.Entities;
+using Resort.Web.ViewModels;
 
 namespace Resort.Web.Controllers
 {
@@ -23,9 +24,14 @@ namespace Resort.Web.Controllers
             _signInManager = signInManager;
         }
 
-        public IActionResult Login()
+        public IActionResult Login(string returnUrl = null)
         {
-            return View();
+            returnUrl??= Url.Content("~/");
+            LoginVM loginVM = new()
+            {
+                RedirectUrl = returnUrl
+            };
+            return View(loginVM);
         }
 
         public IActionResult Register()

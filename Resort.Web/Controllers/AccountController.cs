@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Resort.Application.Common.Interfaces;
 using Resort.Domain.Entities;
 using Resort.Web.ViewModels;
@@ -41,8 +42,17 @@ namespace Resort.Web.Controllers
                 _roleManager.CreateAsync(new IdentityRole("Admin")).Wait();
                 _roleManager.CreateAsync(new IdentityRole("Customer")).Wait();
             }
-            
-            return View();
+
+            RegisterVM registerVM = new()
+            {
+                RoleList = _roleManager.Roles.Select(x => new SelectListItem
+                {
+                    Text = x.Name,
+                    Value = x.Name
+                })
+            };
+
+            return View(registerVM);
         }
     }
 }

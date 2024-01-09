@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Resort.Application.Common.Interfaces;
 using Resort.Domain.Entities;
+using System.Security.Claims;
 
 namespace Resort.Web.Controllers
 {
@@ -12,8 +14,14 @@ namespace Resort.Web.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        [Authorize]
         public IActionResult FinalizeBooking(int villaId, DateOnly checkInDate, int nights)
         {
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            ApplicationUser user = _unitOfWork.User.Get(u => u.Id == userId);
+
             Booking booking = new()
             {
                 VillaId = villaId,
@@ -21,6 +29,10 @@ namespace Resort.Web.Controllers
                 CheckInDate = checkInDate,
                 Nights = nights,
                 CheckOutDate = checkInDate.AddDays(nights),
+                UserId = userId,
+                Phone = user.PhoneNumber,
+                Email = user.Email,
+                Name = user.Name
             };
             booking.TotalCost = booking.Villa.Price * nights;
 

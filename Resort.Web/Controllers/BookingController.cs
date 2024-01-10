@@ -45,7 +45,7 @@ namespace Resort.Web.Controllers
         public IActionResult FinalizeBooking(Booking booking)
         {
             var villa = _unitOfWork.Villa.Get(u => u.Id == booking.VillaId);
-            booking.TotalCost = booking.Villa.Price * booking.Nights;
+            booking.TotalCost = villa.Price * booking.Nights;
 
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;

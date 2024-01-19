@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Resort.Application.Common.Interfaces;
+using Resort.Application.Common.Utility;
 using Resort.Application.Services.Implementation;
 using Resort.Application.Services.Interface;
 using Resort.Domain.Entities;
@@ -11,6 +13,7 @@ using Resort.Web.ViewModels;
 
 namespace Resort.Web.Controllers
 {
+    [Authorize(Roles = SD.Role_Admin)]
     public class VillaNumberController : Controller
     {
         private readonly IVillaNumberService _villaNumberService;

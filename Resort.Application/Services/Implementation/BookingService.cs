@@ -1,4 +1,5 @@
 ﻿using Resort.Application.Common.Interfaces;
+using Resort.Application.Common.Utility;
 using Resort.Application.Services.Interface;
 using Resort.Domain.Entities;
 using System;
@@ -49,6 +50,42 @@ namespace Resort.Application.Services.Implementation
         public Booking GetBookingById(int bookingId)
         {
             return _unitOfWork.Booking.Get(u => u.Id == bookingId, includeProperties: "User, Villa");
+        }
+
+        public void UpdateStatus(int bookingId, string bookingStatus, int villaNumber = 0)
+        {
+            var bookingFromDb = _unitOfWork.Booking.Get(m => m.Id == bookingId);
+            if (bookingFromDb != null)
+            {
+                bookingFromDb.Status = bookingStatus;
+                if (bookingStatus == SD.StatusCheckedIn)
+                {
+                    bookingFromDb.VillaNumber = villaNumber;
+                    bookingFromDb.ActualCheckInDate = DateTime.Now;
+                }
+                if (bookingStatus == SD.StatusCompleted)
+                {
+                    bookingFromDb.ActualCheckOutDate = DateTime.Now;
+                }
+            }
+        }
+
+        public void UpdateStripePaymentID(int bookingId, string sessionId, string paymentIntentId)
+        {
+            var bookingFromDb = _unitOfWork.Booking.Get(m => m.Id == bookingId);
+            if (bookingFromDb != null)
+            {
+                if (!string.IsNullOrEmpty(sessionId))
+                {
+                    bookingFromDb.StripeSessionId = sessionId;
+                }
+                if (!string.IsNullOrEmpty(paymentIntentId))
+                {
+                    bookingFromDb.StripePaymentIntentId = paymentIntentId;
+                    bookingFromDb.PaymentDate = DateTime.Now;
+                    bookingFromDb.IsPaymentSuccessful = true;
+                }
+            }
         }
     }
 }

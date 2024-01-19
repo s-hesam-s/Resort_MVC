@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resort.Application.Common.Interfaces;
+using Resort.Application.Services.Implementation;
+using Resort.Application.Services.Interface;
 using Resort.Domain.Entities;
 using Resort.Infrastructure.Data;
 using Resort.Infrastructure.Repository;
@@ -17,6 +19,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 builder.Services.ConfigureApplicationCookie(option =>
 {

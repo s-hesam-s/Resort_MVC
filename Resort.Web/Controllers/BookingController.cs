@@ -12,6 +12,7 @@ using Syncfusion.Drawing;
 using Syncfusion.Pdf;
 using Microsoft.AspNetCore.Identity;
 using Resort.Application.Services.Interface;
+using Resort.Application.Contract;
 
 namespace Resort.Web.Controllers
 {
@@ -23,10 +24,12 @@ namespace Resort.Web.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IVillaNumberService _villaNumberService;
         private readonly IPaymentService _paymentService;
+        private readonly IEmailService _emailService;
+
         public BookingController(IBookingService bookingService,
             IVillaService villaService, IVillaNumberService villaNumberService,
             IPaymentService paymentService, IWebHostEnvironment webHostEnvironment,
-            UserManager<ApplicationUser> userManager)
+            IEmailService emailService, UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
             _villaService = villaService;
@@ -34,6 +37,7 @@ namespace Resort.Web.Controllers
             _bookingService = bookingService;
             _webHostEnvironment = webHostEnvironment;
             _paymentService = paymentService;
+            _emailService = emailService;
         }
 
 
@@ -120,6 +124,8 @@ namespace Resort.Web.Controllers
                 {
                     _bookingService.UpdateStatus(bookingFromDb.Id, SD.StatusApproved, 0);
                     _bookingService.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
+
+                    //_emailService.SendEmailAsync(bookingFromDb.Email, "Booking Confirmation - Resort", "<p>Your booking has been confirmed. Booking ID - " + bookingFromDb.Id + "</p>");
                 }
             }
 

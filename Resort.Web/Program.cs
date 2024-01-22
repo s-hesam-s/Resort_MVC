@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resort.Application.Common.Interfaces;
+using Resort.Application.Contract;
 using Resort.Application.Services.Implementation;
 using Resort.Application.Services.Interface;
 using Resort.Domain.Entities;
 using Resort.Infrastructure.Data;
+using Resort.Infrastructure.Emails;
 using Resort.Infrastructure.Repository;
 using Stripe;
 using Syncfusion.Licensing;
@@ -27,6 +29,7 @@ builder.Services.AddScoped<IVillaNumberService, VillaNumberService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.ConfigureApplicationCookie(option =>
 {

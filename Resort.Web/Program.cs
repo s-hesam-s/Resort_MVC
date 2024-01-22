@@ -8,6 +8,7 @@ using Resort.Infrastructure.Data;
 using Resort.Infrastructure.Repository;
 using Stripe;
 using Syncfusion.Licensing;
+using WhiteLagoon.Application.Services.Implementation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,7 @@ builder.Services.AddScoped<IVillaService, VillaService>();
 builder.Services.AddScoped<IVillaNumberService, VillaNumberService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.ConfigureApplicationCookie(option =>
 {

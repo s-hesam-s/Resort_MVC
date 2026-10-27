@@ -61,3 +61,6 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Third-party chart distribution; application JavaScript remains detectable.
+/Resort.Web/wwwroot/js/apexcharts.js linguist-vendored

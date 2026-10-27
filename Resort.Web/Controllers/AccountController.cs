@@ -76,11 +76,7 @@ namespace Resort.Web.Controllers
             
             RegisterVM registerVM = new()
             {
-                RoleList = _roleManager.Roles.Select(x => new SelectListItem
-                {
-                    Text = x.Name,
-                    Value = x.Name
-                }),
+                RoleList = new[] { new SelectListItem { Text = SD.Role_Customer, Value = SD.Role_Customer } },
                 RedirectUrl = returnUrl
             };
 
@@ -90,6 +86,8 @@ namespace Resort.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Register(RegisterVM registerVM)
         {
+            registerVM.Role = SD.Role_Customer;
+            registerVM.RoleList = new[] { new SelectListItem { Text = SD.Role_Customer, Value = SD.Role_Customer } };
             if (ModelState.IsValid)
             {
                 ApplicationUser user = new()
@@ -107,13 +105,12 @@ namespace Resort.Web.Controllers
 
                 if (result.Succeeded)
                 {
-                    if (!string.IsNullOrEmpty(registerVM.Role))
+                    var assignmentResult = await _userManager.AddToRoleAsync(user, SD.Role_Customer);
+                    if (!assignmentResult.Succeeded)
                     {
-                        await _userManager.AddToRoleAsync(user, registerVM.Role);
-                    }
-                    else
-                    {
-                        await _userManager.AddToRoleAsync(user, SD.Role_Customer);
+                        await _userManager.DeleteAsync(user);
+                        ModelState.AddModelError(string.Empty, "Unable to assign the customer role.");
+                        return View(registerVM);
                     }
 
                     await _signInManager.SignInAsync(user, isPersistent: false);
@@ -136,11 +133,7 @@ namespace Resort.Web.Controllers
                 }
             }
 
-            registerVM.RoleList = _roleManager.Roles.Select(x => new SelectListItem
-            {
-                Text = x.Name,
-                Value = x.Name
-            });
+            registerVM.RoleList = new[] { new SelectListItem { Text = SD.Role_Customer, Value = SD.Role_Customer } };
 
             return View(registerVM);
         }

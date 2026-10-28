@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Resort.Application.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
+using Resort.Application.Common.Utility;
 
 namespace Resort.Web.Controllers
 {
+    [Authorize(Roles = SD.Role_Admin)]
     public class DashboardController : Controller
     {
         private readonly IDashboardService _dashboardService;

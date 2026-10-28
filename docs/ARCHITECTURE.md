@@ -63,10 +63,11 @@ Selecting Book opens the authenticated FinalizeBooking GET preview. Submitting t
 
 ## Limits to keep visible
 
-- [Program](../Resort.Web/Program.cs) calls [DbInitializer](../Resort.Infrastructure/Data/DbInitializer.cs) on startup. It can migrate and seed roles plus a fixed demonstration administrator account. Review this before running; account/credential literals are intentionally not reproduced here.
-- Administrative navigation is not evidence of an ADMIN-only policy on every endpoint. For example, VillaController currently has a class-level Authorize requirement; this guide does not certify role restrictions on its management actions.
+- [Program](../Resort.Web/Program.cs) calls [DbInitializer](../Resort.Infrastructure/Data/DbInitializer.cs) on startup. It can migrate and create missing application roles, but does not create accounts or assign users to Admin. Review migration behavior before running. Removing the old account seed does not change accounts in an existing database.
+- VillaController and DashboardController require Admin. Booking details, invoice and confirmation require an authenticated owner or Admin; unavailable and inaccessible bookings return 404 before document or payment work.
 - The availability helper is an in-process count calculation, not a transactional booking lock or proven allocation algorithm for all overlapping-date cases.
-- Existing registration tests do not cover booking ownership, inventory concurrency, payment/refund integration or document generation.
+- [Authorization tests](../tests/Authorization.Tests) cover registration, management role policies, booking ownership, form overposting and the booking-list JSON field allowlist. Services are mocked; invoice checks stop before opening a template. They do not prove SQL concurrency, live payment/refund integration or document generation.
+- Checkout binds [BookingRequestVM](../Resort.Web/ViewModels/BookingRequestVM.cs), then creates a new Booking with the current subject, server-calculated amount/checkout date and initial system fields. The booking list returns display rows instead of Identity entities. See [security configuration](../SECURITY-SETUP.md) for the remaining boundaries.
 - Syncfusion export/report paths and Stripe need their own configuration/licensing/integration review. None is exercised by this documentation change.
 
 Configuration and startup requirements are in [README](../README.md#requirements-and-configuration) and [SECURITY-SETUP.md](../SECURITY-SETUP.md).

@@ -44,3 +44,5 @@ jobs:
 
       - name: Build read-only fixture preview
         run: dotnet build tools/Preview/Preview.csproj --configuration Release
+      - name: Check unused vendor boundary
+        run: python scripts/check_vendor_assets.py

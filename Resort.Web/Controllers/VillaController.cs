@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Resort.Application.Services.Interface;
+using Resort.Application.Common.Utility;
 using Resort.Domain.Entities;
 
 namespace Resort.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = SD.Role_Admin)]
     public class VillaController : Controller
     {
         private readonly IVillaService _villaService;

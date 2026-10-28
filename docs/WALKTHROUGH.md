@@ -19,7 +19,7 @@ dotnet test tests/Authorization.Tests/Authorization.Tests.csproj --configuration
 
 Follow [Build and run](../README.md#build-and-run) only after selecting and approving an isolated development database. The checked-in HTTPS profile is `https://localhost:7104`; use a trusted development certificate.
 
-Starting the host calls [DbInitializer](../Resort.Infrastructure/Data/DbInitializer.cs), which can apply migrations and create roles/a fixed demonstration administrator account. Do not copy account/credential literals from that initializer into this guide or treat them as deployment credentials. Startup also reads Stripe settings and registers the configured Syncfusion license. Review the exact initializer behavior and [configuration guidance](../SECURITY-SETUP.md) before running.
+Starting the host calls [DbInitializer](../Resort.Infrastructure/Data/DbInitializer.cs), which can apply migrations and create missing roles. It does not create an administrator account or assign existing users to Admin. Existing accounts are not changed by removal of the earlier demonstration account seed. Startup also reads Stripe settings and registers the configured Syncfusion license. Review the exact initializer behavior and [configuration guidance](../SECURITY-SETUP.md) before running.
 
 No host, database, migration, seed, account, payment or export operation was executed for this documentation update. The following is a manual scenario for an environment you have prepared separately.
 
@@ -69,4 +69,4 @@ For the controlled villa price above, the authenticated preview uses CheckOutDat
 
 ## Evidence and follow-up boundaries
 
-[CI](../.github/workflows/ci.yml) restores/builds the solution, checks public configuration and runs registration regressions. It does not prove a fresh SQL-backed booking deployment, administrative endpoint authorization, concurrent inventory allocation, Stripe integration or Syncfusion output. The fixed demonstration administrator seed and the distinction between authenticated management actions and ADMIN-only actions require separate review; this documentation change does not modify those code paths.
+[CI](../.github/workflows/ci.yml) restores/builds the solution, checks public configuration and runs authorization regressions. Those tests cover registration, management role policies, booking ownership, form overposting and the booking-list JSON allowlist without starting the application. They do not prove a fresh SQL-backed deployment, browser login/cookie behavior, concurrent inventory allocation, live Stripe integration or Syncfusion output. HTML sanitization, file handling, antiforgery, payment confirmation and booking-state/capacity rules remain separate follow-up work.

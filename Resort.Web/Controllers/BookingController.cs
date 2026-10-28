@@ -13,6 +13,7 @@ using Syncfusion.Pdf;
 using Microsoft.AspNetCore.Identity;
 using Resort.Application.Services.Interface;
 using Resort.Application.Contract;
+using Resort.Web.ViewModels;
 
 namespace Resort.Web.Controllers
 {
@@ -50,58 +51,97 @@ namespace Resort.Web.Controllers
         [Authorize]
         public IActionResult FinalizeBooking(int villaId, DateOnly checkInDate, int nights)
         {
-            var claimsIdentity = (ClaimsIdentity)User.Identity;
-            var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (User.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(userId))
+            {
+                return Forbid();
+            }
 
-            ApplicationUser user = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult();
+            if (!isValidStay(checkInDate, nights))
+            {
+                return BadRequest();
+            }
 
-            Booking booking = new()
+            var villa = _villaService.GetVillaById(villaId);
+            if (villa == null)
+            {
+                return NotFound();
+            }
+
+            var user = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult();
+            if (user == null)
+            {
+                return Forbid();
+            }
+
+            return View(createBookingPreview(new BookingRequestVM
             {
                 VillaId = villaId,
-                Villa = _villaService.GetVillaById(villaId),
                 CheckInDate = checkInDate,
                 Nights = nights,
-                CheckOutDate = checkInDate.AddDays(nights),
-                UserId = userId,
                 Phone = user.PhoneNumber,
-                Email = user.Email,
+                Email = user.Email ?? string.Empty,
                 Name = user.Name
-            };
-            booking.TotalCost = booking.Villa.Price * nights;
-
-            return View(booking);
+            }, villa));
         }
 
         [Authorize]
         [HttpPost]
-        public IActionResult FinalizeBooking(Booking booking)
+        public IActionResult FinalizeBooking([Bind(Prefix = "Request")] BookingRequestVM request)
         {
-            Villa villa = _villaService.GetVillaById(booking.VillaId);
-            booking.TotalCost = villa.Price * booking.Nights;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (User.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(userId))
+            {
+                return Forbid();
+            }
 
-            booking.Status = SD.StatusPending;
-            booking.BookingDate = DateTime.Now;
+            if (!isValidStay(request.CheckInDate, request.Nights))
+            {
+                return BadRequest();
+            }
 
-            if (!_villaService.IsVillaAvailableByDate(villa.Id, booking.Nights, booking.CheckInDate))
+            var villa = _villaService.GetVillaById(request.VillaId);
+            if (villa == null)
+            {
+                return NotFound();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(createBookingPreview(request, villa));
+            }
+
+            if (!_villaService.IsVillaAvailableByDate(villa.Id, request.Nights, request.CheckInDate))
             {
                 TempData["error"] = "Room has been sold out!";
-                //no rooms available
                 return RedirectToAction(nameof(FinalizeBooking), new
                 {
-                    villaId = booking.VillaId,
-                    checkInDate = booking.CheckInDate,
-                    nights = booking.Nights
+                    villaId = request.VillaId,
+                    checkInDate = request.CheckInDate,
+                    nights = request.Nights
                 });
             }
+
+            var booking = new Booking
+            {
+                UserId = userId,
+                VillaId = villa.Id,
+                Name = request.Name,
+                Email = request.Email,
+                Phone = request.Phone,
+                CheckInDate = request.CheckInDate,
+                Nights = request.Nights,
+                CheckOutDate = request.CheckInDate.AddDays(request.Nights),
+                TotalCost = villa.Price * request.Nights,
+                Status = SD.StatusPending,
+                BookingDate = DateTime.Now
+            };
 
             _bookingService.CreateBooking(booking);
 
             var domain = Request.Scheme + "://" + Request.Host.Value + "/";
-
             var options = _paymentService.CreateStripeSessionOptions(booking, villa, domain);
-
             var session = _paymentService.CreateStripeSession(options);
-
             _bookingService.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId);
 
             Response.Headers.Add("Location", session.Url);
@@ -112,6 +152,11 @@ namespace Resort.Web.Controllers
         public IActionResult BookingConfirmation(int bookingId)
         {
             Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
+            if (!canAccessBooking(bookingFromDb))
+            {
+                return NotFound();
+            }
+
 
             if (bookingFromDb.Status == SD.StatusPending)
             {
@@ -136,10 +181,15 @@ namespace Resort.Web.Controllers
         public IActionResult BookingDetails(int bookingId)
         {
             Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
+            if (!canAccessBooking(bookingFromDb))
+            {
+                return NotFound();
+            }
+
 
             if (bookingFromDb.VillaNumber == 0 && bookingFromDb.Status == SD.StatusApproved)
             {
-                var availableVillaNumber = AssignAvailableVillaNumberByVilla(bookingFromDb.VillaId);
+                var availableVillaNumber = assignAvailableVillaNumberByVilla(bookingFromDb.VillaId);
 
                 bookingFromDb.VillaNumbers = _villaNumberService.GetAllVillaNumbers().Where(u => u.VillaId == bookingFromDb.VillaId
                 && availableVillaNumber.Any(x => x == u.Villa_Number)).ToList();
@@ -152,6 +202,12 @@ namespace Resort.Web.Controllers
         [Authorize]
         public IActionResult GenerateInvoice(int id, string downloadType)
         {
+            Booking bookingFromDb = _bookingService.GetBookingById(id);
+            if (!canAccessBooking(bookingFromDb))
+            {
+                return NotFound();
+            }
+
             string basePath = _webHostEnvironment.WebRootPath;
 
             WordDocument document = new WordDocument();
@@ -163,7 +219,6 @@ namespace Resort.Web.Controllers
             document.Open(fileStream, FormatType.Automatic);
 
             //Update Template
-            Booking bookingFromDb = _bookingService.GetBookingById(id);
 
             TextSelection textSelection = document.Find("xx_customer_name", false, true);
             WTextRange textRange = textSelection.GetAsOneRange();
@@ -307,7 +362,36 @@ namespace Resort.Web.Controllers
         }
 
 
-        private List<int> AssignAvailableVillaNumberByVilla(int villaId)
+        private bool canAccessBooking(Booking? booking)
+        {
+            if (booking == null || User.Identity?.IsAuthenticated != true)
+            {
+                return false;
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return User.IsInRole(SD.Role_Admin) ||
+                (!string.IsNullOrWhiteSpace(userId) && booking.UserId == userId);
+        }
+
+        private static bool isValidStay(DateOnly checkInDate, int nights)
+        {
+            return checkInDate >= DateOnly.FromDateTime(DateTime.Today) && nights > 0 &&
+                nights <= DateOnly.MaxValue.DayNumber - checkInDate.DayNumber;
+        }
+
+        private static FinalizeBookingVM createBookingPreview(BookingRequestVM request, Villa villa)
+        {
+            return new FinalizeBookingVM
+            {
+                Request = request,
+                Villa = villa,
+                CheckOutDate = request.CheckInDate.AddDays(request.Nights),
+                TotalCost = villa.Price * request.Nights
+            };
+        }
+
+        private List<int> assignAvailableVillaNumberByVilla(int villaId)
         {
             List<int> availableVillaNumbers = new();
 
@@ -332,22 +416,35 @@ namespace Resort.Web.Controllers
         [Authorize]
         public IActionResult GetAll(string status)
         {
-            IEnumerable<Booking> objBookings;
-            string userId = "";
-            if (string.IsNullOrEmpty(status))
+            if (User.Identity?.IsAuthenticated != true)
             {
-                status = "";
+                return Challenge();
             }
 
+            string userId = string.Empty;
             if (!User.IsInRole(SD.Role_Admin))
             {
-                var claimsIdentity = (ClaimsIdentity)User.Identity;
-                userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+                userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Forbid();
+                }
             }
 
-            objBookings = _bookingService.GetAllBookings(userId, status);
+            var bookings = _bookingService.GetAllBookings(userId, status ?? string.Empty);
+            var items = bookings.Select(booking => new BookingListItemVM
+            {
+                Id = booking.Id,
+                Name = booking.Name,
+                Phone = booking.Phone,
+                Email = booking.Email,
+                Status = booking.Status,
+                CheckInDate = booking.CheckInDate,
+                Nights = booking.Nights,
+                TotalCost = booking.TotalCost
+            }).ToList();
 
-            return Json(new { data = objBookings });
+            return Json(new { data = items });
         }
 
         #endregion

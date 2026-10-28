@@ -4,6 +4,14 @@
 
 This screenshot was captured from the local preview host, which renders the application's existing Razor home view and shared layout with clearly labeled sample data. It is not a screenshot of a deployed service or a completed payment/booking transaction.
 
+## Visual tour
+
+<picture><source type="image/webp" srcset="screenshots/ui-tour.webp" /><img src="screenshots/ui-tour.gif" width="100%" alt="Captured UI tour with sample data" /></picture>
+
+Home and carousel → sample villa cards → villa details modal → return. The 10.4-second looping animation is a sequence of captured browser states from the existing Razor views, not continuous video or evidence of a live transaction. Animated WebP preserves photo detail; [GIF](screenshots/ui-tour.gif) is provided as a fallback. The first frame labels the fixture boundary. [Open the static screenshot](screenshots/fixture-preview.png) for a motion-free alternative.
+
+Capture notes: browser viewport 1280 × 720; encoded image 1265 × 712. The Resort modal capture was normalized to the same frame size. No application pixels or sample outcomes were fabricated. The original views, styling and sample model values are retained. To recreate the sequence, start the preview below, follow the shown UI states, and capture the browser viewport without browser chrome. Wait for images and CSS transitions to finish before each capture.
+
 From the repository root, with a .NET 10 SDK:
 
 ```powershell

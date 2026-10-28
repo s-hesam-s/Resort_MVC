@@ -36,11 +36,19 @@ namespace Resort.Web.Controllers
             }
             if (ModelState.IsValid)
             {
-                _villaService.CreateVilla(obj);
+                try
+                {
+                    _villaService.CreateVilla(obj);
+                }
+                catch (InvalidDataException)
+                {
+                    ModelState.AddModelError("Image", "Choose a matching PNG, JPEG or WebP image no larger than 2 MB.");
+                    return View(obj);
+                }
                 TempData["success"] = "The villa has been created successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            return View();
+            return View(obj);
         }
 
         public IActionResult Update(int villaId)
@@ -58,11 +66,19 @@ namespace Resort.Web.Controllers
         {
             if (ModelState.IsValid && obj.Id > 0)
             {
-                _villaService.UpdateVilla(obj);
+                try
+                {
+                    _villaService.UpdateVilla(obj);
+                }
+                catch (InvalidDataException)
+                {
+                    ModelState.AddModelError("Image", "Choose a matching PNG, JPEG or WebP image no larger than 2 MB.");
+                    return View(obj);
+                }
                 TempData["success"] = "The villa has been updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            return View();
+            return View(obj);
         }
 
         public IActionResult Delete(int villaId)
@@ -88,7 +104,7 @@ namespace Resort.Web.Controllers
             {
                 TempData["error"] = "Failed to delete the villa.";
             }
-            return View();
+            return View(obj);
         }
     }
 }

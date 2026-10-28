@@ -137,15 +137,25 @@ namespace Resort.Web.Controllers
                 BookingDate = DateTime.Now
             };
 
-            _bookingService.CreateBooking(booking);
-
-            var domain = Request.Scheme + "://" + Request.Host.Value + "/";
-            var options = _paymentService.CreateStripeSessionOptions(booking, villa, domain);
-            var session = _paymentService.CreateStripeSession(options);
-            _bookingService.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId);
-
-            Response.Headers.Add("Location", session.Url);
-            return new StatusCodeResult(303);
+            try
+            {
+                if (!_bookingService.TryCreateBooking(booking))
+                    return Conflict("The selected stay is no longer available.");
+                var domain = Request.Scheme + "://" + Request.Host.Value + "/";
+                var options = _paymentService.CreateStripeSessionOptions(booking, villa, domain);
+                var session = _paymentService.CreateStripeSession(options);
+                if (session == null || string.IsNullOrWhiteSpace(session.Id) ||
+                    !Uri.TryCreate(session.Url, UriKind.Absolute, out var checkout) || checkout.Scheme != Uri.UriSchemeHttps)
+                    return StatusCode(503, "Checkout could not be started. Review your booking before retrying.");
+                if (!_bookingService.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId))
+                    return Conflict("The booking can no longer start checkout.");
+                Response.Headers.Location = session.Url;
+                return new StatusCodeResult(303);
+            }
+            catch (Exception)
+            {
+                return StatusCode(503, "Checkout could not finish. Review your booking before retrying.");
+            }
         }
 
         [Authorize]
@@ -158,23 +168,40 @@ namespace Resort.Web.Controllers
             }
 
 
-            if (bookingFromDb.Status == SD.StatusPending)
+            return View(new BookingConfirmationVM
             {
-                //this is a pending order, we need to confirm if payment was successful
+                BookingId = bookingFromDb.Id,
+                Status = bookingFromDb.Status,
+                Confirmed = bookingFromDb.IsPaymentSuccessful &&
+                    (bookingFromDb.Status == SD.StatusApproved || bookingFromDb.Status == SD.StatusCheckedIn || bookingFromDb.Status == SD.StatusCompleted),
+                CanVerify = bookingFromDb.Status == SD.StatusPending && !string.IsNullOrWhiteSpace(bookingFromDb.StripeSessionId)
+            });
+        }
 
-                var service = new SessionService();
-                Session session = service.Get(bookingFromDb.StripeSessionId);
-
-                if (session.PaymentStatus == "paid")
-                {
-                    _bookingService.UpdateStatus(bookingFromDb.Id, SD.StatusApproved, 0);
-                    _bookingService.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
-
-                    //_emailService.SendEmailAsync(bookingFromDb.Email, "Booking Confirmation - Resort", "<p>Your booking has been confirmed. Booking ID - " + bookingFromDb.Id + "</p>");
-                }
+        [Authorize]
+        [HttpPost]
+        public IActionResult ConfirmPayment(int bookingId)
+        {
+            var booking = _bookingService.GetBookingById(bookingId);
+            if (!canAccessBooking(booking)) return NotFound();
+            if (booking.IsPaymentSuccessful && (booking.Status == SD.StatusApproved ||
+                booking.Status == SD.StatusCheckedIn || booking.Status == SD.StatusCompleted))
+                return RedirectToAction(nameof(BookingConfirmation), new { bookingId });
+            if (booking.Status != SD.StatusPending || string.IsNullOrWhiteSpace(booking.StripeSessionId))
+                return Conflict("This booking cannot be confirmed.");
+            try
+            {
+                var session = _paymentService.GetCheckoutSession(booking.StripeSessionId);
+                if (!_paymentService.IsPaymentComplete(booking, session))
+                    return Conflict("Payment has not completed for this booking and amount.");
+                if (!_bookingService.ConfirmPayment(booking.Id, session.Id, session.PaymentIntentId))
+                    return Conflict("The booking could not reserve capacity. Contact support to reconcile the payment.");
+                return RedirectToAction(nameof(BookingConfirmation), new { bookingId });
             }
-
-            return View(bookingId);
+            catch (Exception)
+            {
+                return StatusCode(503, "Payment verification could not finish. Check the booking before retrying.");
+            }
         }
 
         [Authorize]
@@ -338,7 +365,8 @@ namespace Resort.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CheckIn(Booking booking)
         {
-            _bookingService.UpdateStatus(booking.Id, SD.StatusCheckedIn, booking.VillaNumber);
+            if (!_bookingService.UpdateStatus(booking.Id, SD.StatusCheckedIn, booking.VillaNumber))
+                return Conflict("The booking transition or room assignment is not allowed. Paid cancellation requires refund reconciliation.");
             TempData["Success"] = "Booking Updated Successfully.";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.Id });
         }
@@ -347,7 +375,8 @@ namespace Resort.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CheckOut(Booking booking)
         {
-            _bookingService.UpdateStatus(booking.Id, SD.StatusCompleted, booking.VillaNumber);
+            if (!_bookingService.UpdateStatus(booking.Id, SD.StatusCompleted, booking.VillaNumber))
+                return Conflict("The booking transition or room assignment is not allowed. Paid cancellation requires refund reconciliation.");
             TempData["Success"] = "Booking Completed Successfully.";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.Id });
         }
@@ -356,7 +385,22 @@ namespace Resort.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CancelBooking(Booking booking)
         {
-            _bookingService.UpdateStatus(booking.Id, SD.StatusCancelled, 0);
+            var stored = _bookingService.GetBookingById(booking.Id);
+            if (stored == null) return NotFound();
+            if (stored.Status == SD.StatusCancelled) return RedirectToAction(nameof(BookingDetails), new { bookingId = stored.Id });
+            if (stored.Status != SD.StatusPending || stored.IsPaymentSuccessful)
+                return Conflict("Paid bookings require refund reconciliation before cancellation.");
+            try
+            {
+                if (!_paymentService.CancelCheckout(stored))
+                    return Conflict("The checkout has completed or cannot be cancelled safely.");
+            }
+            catch (Exception)
+            {
+                return StatusCode(503, "Checkout cancellation could not finish. Check the booking before retrying.");
+            }
+            if (!_bookingService.UpdateStatus(booking.Id, SD.StatusCancelled, 0))
+                return Conflict("The booking transition or room assignment is not allowed. Paid cancellation requires refund reconciliation.");
             TempData["Success"] = "Booking Cancelled Successfully.";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.Id });
         }
@@ -376,8 +420,7 @@ namespace Resort.Web.Controllers
 
         private static bool isValidStay(DateOnly checkInDate, int nights)
         {
-            return checkInDate >= DateOnly.FromDateTime(DateTime.Today) && nights > 0 &&
-                nights <= DateOnly.MaxValue.DayNumber - checkInDate.DayNumber;
+            return BookingRules.ValidStay(checkInDate, nights);
         }
 
         private static FinalizeBookingVM createBookingPreview(BookingRequestVM request, Villa villa)
@@ -387,7 +430,7 @@ namespace Resort.Web.Controllers
                 Request = request,
                 Villa = villa,
                 CheckOutDate = request.CheckInDate.AddDays(request.Nights),
-                TotalCost = villa.Price * request.Nights
+                TotalCost = (double)(decimal.Round((decimal)villa.Price, 2, MidpointRounding.AwayFromZero) * request.Nights)
             };
         }
 

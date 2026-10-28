@@ -28,7 +28,7 @@ Villa and dashboard management require Admin. Booking details, invoices and conf
 
 Checkout accepts only the fields in BookingRequestVM under the `Request` form prefix. It constructs a new Booking with the signed-in subject, recalculated amount/checkout date and initial system fields; client-supplied ownership, status, payment flags, identifiers and navigation entities are not input fields. Invalid model data is not saved or sent to payment. The list returns only the eight display fields used by the table, without Identity or payment entities.
 
-These controls do not complete payment or browser hardening. HTML output, image upload/path handling, antiforgery, payment amount/currency confirmation, legal state transitions, refunds and concurrent capacity allocation require separate review. No host, database migration or real external service is needed by the authorization tests.
+Browser/file controls, validated payment confirmation and locked booking-state/capacity operations are described in [Security boundaries](docs/SECURITY-BOUNDARIES.md). Live SQL/Stripe behavior, webhook fulfillment, automatic refunds and durable reconciliation remain outside the isolated checks. Paid cancellation is rejected rather than being presented as a completed refund.
 
 Historical commits may still contain previous training values. If a value was ever connected to a real resource, its owner should revoke or rotate it; clearing the current files does not invalidate an old value or rewrite Git history.
 

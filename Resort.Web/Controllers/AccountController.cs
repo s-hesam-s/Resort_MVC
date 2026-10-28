@@ -138,6 +138,7 @@ namespace Resort.Web.Controllers
             return View(registerVM);
         }
 
+        [HttpPost]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();

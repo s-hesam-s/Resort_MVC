@@ -1,4 +1,6 @@
-﻿using Resort.Application.Common.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Data;
+using Resort.Application.Common.Interfaces;
 using Resort.Domain.Entities;
 using Resort.Infrastructure.Data;
 using System;
@@ -26,6 +28,18 @@ namespace Resort.Infrastructure.Repository
             Booking = new BookingRepository(_db);
             User = new ApplicationUserRepository(_db);
         }
+        public T ExecuteWithVillaLock<T>(int villaId, Func<T> operation)
+        {
+            using var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable);
+            var villa = _db.Villas.FromSqlInterpolated(
+                $"SELECT * FROM [Villas] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {villaId}")
+                .AsNoTracking().SingleOrDefault();
+            if (villa == null) throw new InvalidOperationException("The villa no longer exists.");
+            var result = operation();
+            transaction.Commit();
+            return result;
+        }
+
         public void Save()
         {
             _db.SaveChanges();

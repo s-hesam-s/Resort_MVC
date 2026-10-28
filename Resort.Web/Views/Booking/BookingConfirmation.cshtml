@@ -1,13 +1,24 @@
-﻿@model int
+﻿@model BookingConfirmationVM
 
-<div class="container  pt-4">
-    <div class="col-12 text-center">
-        <h1 class="text-success text-center">Your Vacation is Confirmed!</h1>
-        Your Order Number is : @Model <br />
-        <p>You can view all order details in Manage Order Section.</p>
-        <img src="~/images/orderConfirmed.jpg" style="border-radius:20px" width="65%" />
-    </div>
-    <div class="col-12 text-center text-warning">
-        <p class="pt-1">Pack your bags! You are one step closer to an amazing vacation!</p>
-    </div>
-</div> 
+<div class="container pt-4 text-center">
+    @if (Model.Confirmed)
+    {
+        <h1 class="text-success">Your Vacation is Confirmed!</h1>
+        <p>Booking number: @Model.BookingId</p>
+        <p>You can view the details in Manage Booking.</p>
+        <img src="~/images/orderConfirmed.jpg" style="border-radius:20px" width="65%" alt="Confirmed reservation" />
+    }
+    else
+    {
+        <h1>Booking payment verification</h1>
+        <p>Booking number: @Model.BookingId · Status: @Model.Status</p>
+        <p>A checkout redirect alone does not confirm payment or reserve an expired booking.</p>
+        @if (Model.CanVerify)
+        {
+            <form method="post" asp-action="ConfirmPayment">
+                <input type="hidden" name="bookingId" value="@Model.BookingId" />
+                <button class="btn btn-success" type="submit">Verify payment and confirm booking</button>
+            </form>
+        }
+    }
+</div>

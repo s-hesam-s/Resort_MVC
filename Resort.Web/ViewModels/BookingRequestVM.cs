@@ -7,7 +7,7 @@ namespace Resort.Web.ViewModels
         [Range(1, int.MaxValue)]
         public int VillaId { get; set; }
         public DateOnly CheckInDate { get; set; }
-        [Range(1, int.MaxValue)]
+        [Range(1, 365)]
         public int Nights { get; set; }
         [Required]
         public string Name { get; set; } = string.Empty;

@@ -1,0 +1,17 @@
+# Manual reads against an already approved development environment.
+# Start no host from this file. Review ../WALKTHROUGH.md first.
+@web = https://localhost:7104
+# Choose a future date; this is example input, not a captured reservation.
+@checkInDate = 2030-01-15
+
+### Server-rendered home page.
+GET {{web}}/
+Accept: text/html
+
+### Equivalent read of the availability action; the browser UI uses POST.
+GET {{web}}/Home/GetVillasByDate?checkInDate={{checkInDate}}&nights=2
+Accept: text/html
+
+### Customer login form only; no credentials or account writes.
+GET {{web}}/Account/Login
+Accept: text/html

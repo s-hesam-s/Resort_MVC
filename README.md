@@ -89,3 +89,7 @@ See [implemented controls and verification limits](docs/SECURITY-BOUNDARIES.md) 
 See [runtime, dependency audit and migration notes](docs/RUNTIME.md) for the .NET 10 target and verification boundaries.
 
 [Local verification snapshot](docs/VERIFICATION.md) records the build, isolated-test and dependency-audit boundaries.
+
+## Frontend vendor boundary
+
+[Unused vendor removal and verification](docs/FRONTEND-DEPENDENCIES.md) documents the jquery-ajax-unobtrusive cleanup; active runtime libraries remain unchanged.

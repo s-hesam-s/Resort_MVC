@@ -19,6 +19,10 @@ An educational ASP.NET Core MVC application for browsing villas and managing res
 | [Resort.Web](Resort.Web) | MVC controllers, views, accounts and host configuration |
 | [tests/Authorization.Tests](tests/Authorization.Tests) | Registration authorization regression tests |
 
+## Technical walkthrough
+
+Follow the [source-backed walkthrough](docs/WALKTHROUGH.md) for isolated regression evidence, development prerequisites, sample requests and expected outcomes. The [architecture notes](docs/ARCHITECTURE.md) map the implementation and its tradeoffs; [read-only HTTP examples](docs/examples/read-only.http) are provided for an already configured development environment. The manual scenario has not been executed as a live deployment.
+
 ## Requirements and configuration
 
 Use an SDK capable of targeting .NET 8 and an isolated SQL Server development database. Package restore requires access to the configured NuGet feeds. These are existing .NET 8 examples; dependency and runtime modernization are separate work.

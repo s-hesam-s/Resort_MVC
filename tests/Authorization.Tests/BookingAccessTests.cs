@@ -97,7 +97,7 @@ public class BookingAccessTests
         if (action == "details")
             Assert.Same(booking, view.Model);
         else
-            Assert.Equal(42, Assert.IsType<int>(view.Model));
+            Assert.Equal(42, Assert.IsType<BookingConfirmationVM>(view.Model).BookingId);
         assertOnlyBookingRead();
     }
 
@@ -216,12 +216,12 @@ public class BookingAccessTests
         villas.Setup(v => v.GetVillaById(1)).Returns(villa);
         villas.Setup(v => v.IsVillaAvailableByDate(1, 2, request.CheckInDate)).Returns(true);
         Booking saved = null;
-        bookings.Setup(b => b.CreateBooking(It.IsAny<Booking>())).Callback<Booking>(booking =>
+        bookings.Setup(b => b.TryCreateBooking(It.IsAny<Booking>())).Callback<Booking>(booking =>
         {
             saved = booking;
             Assert.Equal(0, booking.Id);
             booking.Id = 42;
-        });
+        }).Returns(true);
         var options = new SessionCreateOptions();
         payments.Setup(p => p.CreateStripeSessionOptions(It.IsAny<Booking>(), villa, "https://example.invalid/"))
             .Returns(options);
@@ -229,7 +229,7 @@ public class BookingAccessTests
         {
             Id = "server-session", Url = "https://checkout.example.invalid/"
         });
-        bookings.Setup(b => b.UpdateStripePaymentID(42, "server-session", null));
+        bookings.Setup(b => b.UpdateStripePaymentID(42, "server-session", null)).Returns(true);
 
         var controller = createController("owner");
         var result = Assert.IsType<StatusCodeResult>(controller.FinalizeBooking(request));
@@ -248,7 +248,7 @@ public class BookingAccessTests
         Assert.Null(saved.StripePaymentIntentId);
         Assert.Null(saved.User);
         Assert.Null(saved.Villa);
-        bookings.Verify(b => b.CreateBooking(It.IsAny<Booking>()), Times.Once);
+        bookings.Verify(b => b.TryCreateBooking(It.IsAny<Booking>()), Times.Once);
         payments.Verify(p => p.CreateStripeSession(options), Times.Once);
     }
 

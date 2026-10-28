@@ -14,5 +14,6 @@ namespace Resort.Application.Common.Interfaces
         IBookingRepository Booking { get; }
         IApplicationUserRepository User { get; }
         void Save();
+        T ExecuteWithVillaLock<T>(int villaId, Func<T> operation);
     }
 }

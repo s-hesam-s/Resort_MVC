@@ -12,5 +12,8 @@ namespace Resort.Application.Services.Interface
     {
         SessionCreateOptions CreateStripeSessionOptions(Booking booking, Villa villa, string domain);
         Session CreateStripeSession(SessionCreateOptions options);
+        Session GetCheckoutSession(string sessionId);
+        bool IsPaymentComplete(Booking booking, Session session);
+        bool CancelCheckout(Booking booking);
     }
 }

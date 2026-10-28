@@ -25,50 +25,33 @@ namespace Resort.Application.Services.Implementation
 
         public void CreateVilla(Villa villa)
         {
-            if (villa.Image != null)
+            villa.ImageUrl = villa.Image == null ? "https://placehold.co/600x400" :
+                VillaImageStorage.Save(villa.Image, _webHostEnvironment.WebRootPath);
+            try
             {
-                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(villa.Image.FileName);
-                string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\VillaImage");
-
-                using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
-                villa.Image.CopyTo(fileStream);
-
-                villa.ImageUrl = @"\images\VillaImage\" + fileName;
+                _unitOfWork.Villa.Add(villa);
+                _unitOfWork.Save();
             }
-            else
+            catch
             {
-                villa.ImageUrl = "https://placehold.co/600x400";
+                if (villa.Image != null) VillaImageStorage.DeleteManaged(villa.ImageUrl, _webHostEnvironment.WebRootPath);
+                throw;
             }
-
-            _unitOfWork.Villa.Add(villa);
-            _unitOfWork.Save();
         }
 
         public bool DeleteVilla(int id)
         {
+            var stored = _unitOfWork.Villa.Get(v => v.Id == id);
+            if (stored == null) return false;
             try
             {
-                Villa? objFromDb = _unitOfWork.Villa.Get(u => u.Id == id);
-                if (objFromDb is not null)
-                {
-                    if (!string.IsNullOrEmpty(objFromDb.ImageUrl))
-                    {
-                        var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, objFromDb.ImageUrl.TrimStart('\\'));
-
-                        if (System.IO.File.Exists(oldImagePath))
-                        {
-                            System.IO.File.Delete(oldImagePath);
-                        }
-                    }
-                    _unitOfWork.Villa.Remove(objFromDb);
-                    _unitOfWork.Save();
-                }
-                return true;
+                _unitOfWork.Villa.Remove(stored);
+                _unitOfWork.Save();
             }
-            catch (Exception)
-            {
-                return false;
-            }
+            catch (Exception) { return false; }
+            try { VillaImageStorage.DeleteManaged(stored.ImageUrl, _webHostEnvironment.WebRootPath); }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* The committed deletion can leave an orphan image for later cleanup. */ }
+            return true;
         }
 
         public IEnumerable<Villa> GetAllVillas()
@@ -86,7 +69,8 @@ namespace Resort.Application.Services.Implementation
             var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();
             var villaNumbersList = _unitOfWork.VillaNumber.GetAll().ToList();
             var bookedVillas = _unitOfWork.Booking.GetAll(u => u.Status == SD.StatusApproved ||
-            u.Status == SD.StatusCheckedIn).ToList();
+            u.Status == SD.StatusCheckedIn || (u.Status == SD.StatusPending &&
+            u.BookingDate > DateTime.UtcNow.AddMinutes(-BookingRules.HoldMinutes))).ToList();
 
 
             foreach (var villa in villaList)
@@ -104,7 +88,8 @@ namespace Resort.Application.Services.Implementation
         {
             var villaNumbersList = _unitOfWork.VillaNumber.GetAll().ToList();
             var bookedVillas = _unitOfWork.Booking.GetAll(u => u.Status == SD.StatusApproved ||
-            u.Status == SD.StatusCheckedIn).ToList();
+            u.Status == SD.StatusCheckedIn || (u.Status == SD.StatusPending &&
+            u.BookingDate > DateTime.UtcNow.AddMinutes(-BookingRules.HoldMinutes))).ToList();
 
             int roomAvailable = SD.VillaRoomsAvailable_Count
                 (villaId, villaNumbersList, checkInDate, nights, bookedVillas);
@@ -114,29 +99,32 @@ namespace Resort.Application.Services.Implementation
 
         public void UpdateVilla(Villa villa)
         {
+            var stored = _unitOfWork.Villa.Get(v => v.Id == villa.Id);
+            if (stored == null) throw new InvalidOperationException("The villa no longer exists.");
+            var oldImage = stored.ImageUrl;
+            var newImage = villa.Image == null ? oldImage : VillaImageStorage.Save(villa.Image, _webHostEnvironment.WebRootPath);
+            stored.Name = villa.Name;
+            stored.Description = villa.Description;
+            stored.Price = villa.Price;
+            stored.Sqft = villa.Sqft;
+            stored.Occupancy = villa.Occupancy;
+            stored.ImageUrl = newImage;
+            stored.UpdatedDate = DateTime.UtcNow;
+            try
+            {
+                _unitOfWork.Villa.Update(stored);
+                _unitOfWork.Save();
+            }
+            catch
+            {
+                if (villa.Image != null) VillaImageStorage.DeleteManaged(newImage, _webHostEnvironment.WebRootPath);
+                throw;
+            }
             if (villa.Image != null)
             {
-                string fileName = Guid.NewGuid().ToString() + Path.GetExtension(villa.Image.FileName);
-                string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\VillaImage");
-
-                if (!string.IsNullOrEmpty(villa.ImageUrl))
-                {
-                    var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, villa.ImageUrl.TrimStart('\\'));
-
-                    if (System.IO.File.Exists(oldImagePath))
-                    {
-                        System.IO.File.Delete(oldImagePath);
-                    }
-                }
-
-                using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
-                villa.Image.CopyTo(fileStream);
-
-                villa.ImageUrl = @"\images\VillaImage\" + fileName;
+                try { VillaImageStorage.DeleteManaged(oldImage, _webHostEnvironment.WebRootPath); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { /* Keep the saved villa even when old-image cleanup is unavailable. */ }
             }
-
-            _unitOfWork.Villa.Update(villa);
-            _unitOfWork.Save();
         }
     }
 }

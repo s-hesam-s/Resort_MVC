@@ -39,14 +39,11 @@ The unchanged model seed in [ApplicationDbContext](../Resort.Infrastructure/Data
 Choose a future date and two nights in the home page. The actual jQuery request is:
 
 ```http
-POST https://localhost:7104/Home/GetVillasByDate
-Content-Type: application/x-www-form-urlencoded
+GET https://localhost:7104/Home/GetVillasByDate?checkInDate=<future-date-YYYY-MM-DD>&nights=2
 Accept: text/html
-
-checkInDate=<future-date-YYYY-MM-DD>&nights=2
 ```
 
-This action reads availability and returns `PartialView("_VillaList", homeVM)`. It does not create a booking or call Stripe. The action has no verb constraint, so [read-only.http](examples/read-only.http) provides an equivalent GET for manual inspection.
+This action reads availability and returns `PartialView("_VillaList", homeVM)`. It does not create a booking or call Stripe. The browser uses GET, also shown in [read-only.http](examples/read-only.http). A manual POST is subject to antiforgery validation.
 
 Expected response: HTTP 200 and an HTML fragment containing the `VillasList` element. The browser replaces the old list. Villas are marked Book or Sold Out according to IsAvailable; the method does not return a JSON list or filter out every unavailable villa.
 
@@ -65,8 +62,8 @@ Anonymous requests are challenged through cookie authentication and normally red
 
 For the controlled villa price above, the authenticated preview uses CheckOutDate = CheckInDate + 2 days and TotalCost = 200 × 2 = **400**. These are view-model calculations, not evidence of a paid reservation. Identity-backed name/contact details are loaded for the current user; do not share screenshots containing real account information.
 
-**Stop before submitting FinalizeBooking.** Its POST recalculates the amount, checks availability, writes a Pending booking, creates a Stripe session and returns HTTP 303 with a Location header. That is outside this non-payment walkthrough. BookingConfirmation can also call Stripe for a Pending booking, so it is not part of the read-only HTTP file.
+**Stop before submitting FinalizeBooking.** Its POST recalculates the amount, checks availability, writes a Pending booking, creates a Stripe session and returns HTTP 303 with a Location header. That is outside this non-payment walkthrough. BookingConfirmation GET only reads state; its separate ConfirmPayment POST can call Stripe and update the reservation, so payment verification is outside this walkthrough.
 
 ## Evidence and follow-up boundaries
 
-[CI](../.github/workflows/ci.yml) restores/builds the solution, checks public configuration and runs authorization regressions. Those tests cover registration, management role policies, booking ownership, form overposting and the booking-list JSON allowlist without starting the application. They do not prove a fresh SQL-backed deployment, browser login/cookie behavior, concurrent inventory allocation, live Stripe integration or Syncfusion output. HTML sanitization, file handling, antiforgery, payment confirmation and booking-state/capacity rules remain separate follow-up work.
+[CI](../.github/workflows/ci.yml) restores/builds the solution, checks public configuration and runs authorization regressions. Those tests cover registration, management role policies, booking ownership, form overposting and the booking-list JSON allowlist without starting the application. They do not prove a fresh SQL-backed deployment, browser login/cookie behavior, concurrent inventory allocation, live Stripe integration or Syncfusion output. See [Security boundaries](SECURITY-BOUNDARIES.md) for the implemented browser/file/payment/capacity controls and the remaining live-integration, webhook and refund limitations.

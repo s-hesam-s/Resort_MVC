@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Resort.Application.Common.Interfaces;
 using Resort.Application.Contract;
@@ -15,7 +15,7 @@ using WhiteLagoon.Application.Services.Implementation;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+Resort.Web.Configuration.MvcConfiguration.AddResortMvc(builder.Services);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
           options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -58,13 +58,18 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    await next();
+});
 app.UseStaticFiles();
 
 app.UseRouting();
 
 app.UseAuthorization();
 
-SeedDatabase();
+seedDatabase();
 
 app.MapControllerRoute(
     name: "default",
@@ -72,7 +77,7 @@ app.MapControllerRoute(
 
 app.Run();
 
-void SeedDatabase()
+void seedDatabase()
 {
     using (var scope = app.Services.CreateScope())
     {

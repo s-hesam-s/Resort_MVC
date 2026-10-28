@@ -23,39 +23,20 @@ namespace Resort.Application.Common.Utility
         public static int VillaRoomsAvailable_Count(int villaId,List<VillaNumber> villaNumberList, 
                                          DateOnly checkInDate, int nights, List<Booking> bookings)
         {
-            List<int> bookingInDate = new();
-            int finalAvailableRoomForAllNights = int.MaxValue;
-            var roomsInVilla = villaNumberList.Where(x => x.VillaId == villaId).Count();
-
-            for (int i = 0; i < nights; i++)
+            if (nights <= 0 || nights > BookingRules.MaximumNights ||
+                nights > DateOnly.MaxValue.DayNumber - checkInDate.DayNumber) return 0;
+            var rooms = villaNumberList.Count(v => v.VillaId == villaId);
+            var minimum = rooms;
+            for (var day = 0; day < nights; day++)
             {
-                var villasBooked = bookings.Where(u => u.CheckInDate <= checkInDate.AddDays(i)
-                && u.CheckOutDate > checkInDate.AddDays(i) && u.VillaId == villaId);
-
-                foreach (var booking in villasBooked)
-                {
-                    if (!bookingInDate.Contains(booking.Id))
-                    {
-                        bookingInDate.Add(booking.Id);
-                    }
-                }
-
-                var totalAvailableRooms = roomsInVilla - bookingInDate.Count;
-                if (totalAvailableRooms == 0)
-                {
-                    return 0;
-                }
-                else
-                {
-                    if (finalAvailableRoomForAllNights > totalAvailableRooms)
-                    {
-                        finalAvailableRoomForAllNights = totalAvailableRooms;
-                    }
-                }
+                var date = checkInDate.AddDays(day);
+                var occupied = bookings.Where(b => b.VillaId == villaId &&
+                    b.CheckInDate <= date && b.CheckOutDate > date).Select(b => b.Id).Distinct().Count();
+                minimum = Math.Min(minimum, Math.Max(0, rooms - occupied));
             }
-
-            return finalAvailableRoomForAllNights;
+            return minimum;
         }
+
 
         public static RadialBarChartDto GetRadialChartDataModel(int totalCount, double currentMonthCount, double prevMonthCount)
         {
